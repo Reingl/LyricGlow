@@ -34,3 +34,14 @@ The Supabase project URL is configured in `app/build.gradle.kts`. Copy `local.pr
 
 ## Build status
 Source assembled for Android Studio. It has not been built on a real Android SDK in this environment; verify Gradle sync/build on your machine before treating it as release-ready.
+
+
+## Build an APK without Android Studio (GitHub Actions)
+This repository includes `.github/workflows/build-apk.yml`.
+1. Upload/extract the project files into the root of your GitHub repository, including the hidden `.github` folder.
+2. Open the repository on GitHub and select **Actions**.
+3. Select **Build LyricGlow APK**. If it has not run automatically after your upload, choose **Run workflow**.
+4. Wait for the workflow to finish, open the successful run, and download the `LyricGlow-debug-apk` artifact.
+5. Extract the artifact ZIP to get `app-debug.apk`, then install it on your Android phone. You may need to allow installs from your browser/file manager.
+
+GitHub Actions performs the build on a hosted Linux runner; Android Studio is not required on your phone. This workflow creates a debug APK for testing, not a signed Play Store release.
