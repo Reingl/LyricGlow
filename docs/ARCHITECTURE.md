@@ -3,6 +3,9 @@
 ## Playback
 `PlaybackService` owns a Media3 ExoPlayer and MediaSession. The Activity connects with a MediaController. UI recreation does not own or destroy the player.
 
+## Appearance
+Home layout, visual theme, visible sections and the glass-surface preference are persisted locally in SharedPreferences. Home layout and visual theme are independent selections. Theme previews are drawn from simple Compose shapes, not full screenshots or album artwork.
+
 ## Provider boundary
 Provider adapters should resolve authorised catalog items into the app's `Track` model and a playable URI accepted by the provider's terms. The playback layer should not contain provider-specific scraping logic.
 
@@ -14,3 +17,4 @@ Provider adapters should resolve authorised catalog items into the app's `Track`
 - `account`: Supabase Auth and profile
 - `sync`: idempotent listening events and cloud sync
 - `extensions`: signed/declarative ZIP add-ons; no arbitrary code execution
+- `visual`: versioned theme tokens, component customization and adaptive glass/shader renderer

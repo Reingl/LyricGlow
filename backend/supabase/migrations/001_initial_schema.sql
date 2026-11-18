@@ -55,29 +55,23 @@ create policy "profiles read own" on public.profiles
     for select using (auth.uid() = id);
 create policy "profiles update own" on public.profiles
     for update using (auth.uid() = id) with check (auth.uid() = id);
-
 create policy "settings read own" on public.user_settings
     for select using (auth.uid() = user_id);
 create policy "settings insert own" on public.user_settings
     for insert with check (auth.uid() = user_id);
 create policy "settings update own" on public.user_settings
     for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
 create policy "friendships read participant" on public.friendships
     for select using (auth.uid() in (requester_id, addressee_id));
 create policy "friendships request own" on public.friendships
     for insert with check (auth.uid() = requester_id and status = 'pending');
-
 create policy "listening events read own" on public.listening_events
     for select using (auth.uid() = user_id);
 create policy "listening events insert own" on public.listening_events
     for insert with check (auth.uid() = user_id);
 
 create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
+returns trigger language plpgsql security definer set search_path = ''
 as $$
 begin
     insert into public.profiles (id, display_name)

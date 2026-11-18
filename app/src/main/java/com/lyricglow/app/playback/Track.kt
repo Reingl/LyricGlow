@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 
-/** App-level track model. Provider-specific IDs can be added without changing the player UI. */
 data class Track(
     val id: String,
     val title: String,
@@ -17,12 +16,9 @@ data class Track(
             .setTitle(title)
             .setArtist(artist)
             .apply {
-                if (!artworkUrl.isNullOrBlank()) {
-                    setArtworkUri(Uri.parse(artworkUrl))
-                }
+                if (!artworkUrl.isNullOrBlank()) setArtworkUri(Uri.parse(artworkUrl))
             }
             .build()
-
         return MediaItem.Builder()
             .setMediaId(id)
             .setUri(streamUrl)
