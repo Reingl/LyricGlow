@@ -1,8 +1,8 @@
-# Security checklist
+# Security and privacy notes
 
-- APK may contain only the Supabase URL and publishable/anon key.
-- Never include service-role keys, database passwords, OAuth client secrets, or signing keys in Git.
-- Enforce RLS for every user-owned table and test owner/friend/unrelated-user access.
-- Validate listening-event durations server-side; use client-generated UUIDs for idempotency.
-- Implement account deletion and data export before public release.
-- This starter migration is not production-reviewed. Test in a separate Supabase project first.
+- The Android app must only contain the Supabase project URL and publishable/anon key.
+- Never embed service-role keys, database passwords, Discord client secrets or signing keys.
+- Enable Row Level Security on every user-owned table and test owner, accepted-friend and unrelated-user access.
+- Treat stream URLs and provider tokens as sensitive; do not log credentials.
+- Ask permission before publishing listening activity. Default profile visibility should remain friends-only with separate toggles for now-playing, history and statistics.
+- Provide account deletion and data export paths before public release.
