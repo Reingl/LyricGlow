@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -40,7 +41,7 @@ import java.util.concurrent.Executor
 
 private enum class HomeLayout(val label: String) { TOP_PICKS("Top Picks"), IMMERSIVE("Immersive") }
 private enum class VisualTheme(val label: String) { CRYSTAL("Crystal"), NOCTURNE("Nocturne"), ATELIER("Atelier") }
-private enum class AppPage { HOME, EXPLORE, LIBRARY, SEARCH, PLAYER, APPEARANCE }
+private enum class AppPage { HOME, SEARCH, LIBRARY, PROFILE, PLAYER, APPEARANCE }
 
 private data class Palette(
     val bg: Color, val surface: Color, val raised: Color, val text: Color,
@@ -105,16 +106,22 @@ private fun LyricGlowRoot(future: ListenableFuture<MediaController>) {
     }
 
     val colors = palette(theme)
-    when (page) {
-        AppPage.APPEARANCE -> AppearancePage(layout, { layout = it }, theme, { theme = it },
-            glass, { glass = it }, topPicks, { topPicks = it }, recents, { recents = it },
-            moods, { moods = it }, colors) { page = AppPage.HOME }
-        AppPage.EXPLORE -> SimplePage("Explore", "Discover music, mixes and new releases.", colors) { page = AppPage.HOME }
-        AppPage.LIBRARY -> SimplePage("Your Library", "Your saved music will appear here.", colors) { page = AppPage.HOME }
-        AppPage.SEARCH -> SearchPage(colors) { page = AppPage.HOME }
-        AppPage.PLAYER -> PlayerPage(future, colors) { page = AppPage.HOME }
-        AppPage.HOME -> HomePage(layout, theme, glass, topPicks, recents, moods, colors, future,
-            onAppearance = { page = AppPage.APPEARANCE }, onNavigate = { page = it })
+    val mainTab = page == AppPage.HOME || page == AppPage.SEARCH || page == AppPage.LIBRARY || page == AppPage.PROFILE
+    Column(Modifier.fillMaxSize().background(colors.bg)) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (page) {
+                AppPage.APPEARANCE -> AppearancePage(layout, { layout = it }, theme, { theme = it },
+                    glass, { glass = it }, topPicks, { topPicks = it }, recents, { recents = it },
+                    moods, { moods = it }, colors) { page = AppPage.PROFILE }
+                AppPage.LIBRARY -> SimplePage("Your Library", "Your saved music and playlists will appear here.", colors) { page = AppPage.HOME }
+                AppPage.SEARCH -> SearchPage(colors) { page = AppPage.HOME }
+                AppPage.PROFILE -> ProfilePage(colors, onAppearance = { page = AppPage.APPEARANCE })
+                AppPage.PLAYER -> PlayerPage(future, colors) { page = AppPage.HOME }
+                AppPage.HOME -> HomePage(layout, theme, glass, topPicks, recents, moods, colors, future,
+                    onAppearance = { page = AppPage.PROFILE }, onNavigate = { page = it })
+            }
+        }
+        if (mainTab) MainTabBar(page, colors) { page = it }
     }
 }
 
@@ -179,7 +186,7 @@ private fun HomePage(
                 .padding(horizontal = 15.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("↑", color = c.text, fontSize = 17.sp)
                 Spacer(Modifier.width(12.dp))
-                Text("Appearance", color = c.text, fontSize = 12.sp)
+                Text("Profile", color = c.text, fontSize = 12.sp)
             }
         }
 
@@ -284,17 +291,58 @@ private fun HomePage(
             }
         }
 
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(34.dp)).background(c.surface).padding(5.dp),
-            horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-            NavItem("⌂", "Home", true, c) { onNavigate(AppPage.HOME) }
-            NavItem("▦", "Explore", false, c) { onNavigate(AppPage.EXPLORE) }
-            NavItem("▤", "Library", false, c) { onNavigate(AppPage.LIBRARY) }
-            NavItem("⌕", "Search", false, c) { onNavigate(AppPage.SEARCH) }
-        }
         TextButton(onClick = { showUrl = !showUrl }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(if (showUrl) "Close audio URL" else "Add audio URL", color = c.muted)
         }
+    }
+}
+
+@Composable
+private fun ProfilePage(c: Palette, onAppearance: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(c.bg).verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Text("Profile", color = c.text, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(c.surface).padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(58.dp).clip(CircleShape).background(c.raised), contentAlignment = Alignment.Center) {
+                Text("♫", color = c.text, fontSize = 27.sp)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text("Your LyricGlow profile", color = c.text, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                Text("Account and listening preferences", color = c.muted, fontSize = 12.sp)
+            }
+        }
+        Text("Settings", color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        ProfileSettingRow("Appearance", "Themes, home screen and visual effects", "◐", c, onAppearance)
+        ProfileSettingRow("Playback", "Playback behaviour and audio quality", "♫", c) { }
+        ProfileSettingRow("Privacy", "Your profile and listening activity", "⌑", c) { }
+        ProfileSettingRow("About LyricGlow", "Version, licences and help", "ⓘ", c) { }
+    }
+}
+
+@Composable
+private fun ProfileSettingRow(title: String, subtitle: String, icon: String, c: Palette, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface)
+        .clickable { onClick() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(icon, color = c.accent, fontSize = 23.sp, modifier = Modifier.width(38.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = c.text, fontWeight = FontWeight.Medium)
+            Text(subtitle, color = c.muted, fontSize = 11.sp)
+        }
+        Text("›", color = c.muted, fontSize = 24.sp)
+    }
+}
+
+@Composable
+private fun MainTabBar(selected: AppPage, c: Palette, onSelect: (AppPage) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)
+        .clip(RoundedCornerShape(34.dp)).background(c.surface).padding(5.dp),
+        horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
+        NavItem("⌂", "Home", selected == AppPage.HOME, c) { onSelect(AppPage.HOME) }
+        NavItem("⌕", "Search", selected == AppPage.SEARCH, c) { onSelect(AppPage.SEARCH) }
+        NavItem("▤", "Library", selected == AppPage.LIBRARY, c) { onSelect(AppPage.LIBRARY) }
+        NavItem("●", "Profile", selected == AppPage.PROFILE, c) { onSelect(AppPage.PROFILE) }
     }
 }
 

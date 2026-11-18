@@ -10,7 +10,8 @@ An ad-free, customisable Android music app foundation. Version 0.3.0 adds select
 - Playback seek controls and full-screen player
 - Two home layouts: Top Picks and Immersive
 - Three visual themes: Crystal, Nocturne and Atelier
-- Settings > Appearance with persistent layout/theme/section preferences
+- Persistent four-tab navigation: Home, Search, Library and Profile
+- Profile includes Settings > Appearance with persistent layout/theme/section preferences
 - Lightweight skeletal previews that do not load album art
 - Adaptive translucent-surface toggle (native real-time blur renderer is not yet implemented)
 - Supabase URL and publishable-key configuration placeholder
@@ -32,4 +33,4 @@ The ZIP intentionally excludes machine-specific `local.properties`, signing keys
 The Supabase project URL is configured in `app/build.gradle.kts`. Copy `local.properties.example` to `local.properties` and set `SUPABASE_PUBLISHABLE_KEY` if/when the Supabase client is enabled. Never put a service-role key, database password, or OAuth client secret in the Android app or public repository.
 
 ## Build verification
-This source ZIP was assembled from the repository source and updated for the appearance milestone. It has not been compiled against an Android SDK in this environment. Run Gradle sync/build before treating it as verified.
+This source ZIP was assembled from the repository source and updated for the appearance and navigation milestone. It has not been compiled against an Android SDK in this environment. Run Gradle sync/build before treating it as verified.
