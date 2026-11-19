@@ -34,3 +34,10 @@ The Supabase project URL is configured in `app/build.gradle.kts`. Copy `local.pr
 
 ## Build verification
 This source ZIP was assembled from the repository source and updated for the appearance and navigation milestone. It has not been compiled against an Android SDK in this environment. Run Gradle sync/build before treating it as verified.
+
+
+## 0.4.0 update
+
+The current UI uses a monochrome design system with Mono Green as the default accent, plus Carbon and Paper themes. Recently Played is populated from actual playback starts and stored locally on-device; it remains empty until music has been played. Demo catalogue cards and fabricated track names have been removed.
+
+Appearance settings include a best-effort experimental blur option. Android version, device GPU, and system rendering support still determine whether blur can be rendered; the option cannot bypass platform limitations. See [CHANGELOG.md](CHANGELOG.md) for details.

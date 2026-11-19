@@ -31,3 +31,4 @@
 - [ ] AGSL shader/effect renderer with performance controls
 - [ ] Component-level customization and import/export presets
 - [ ] Declarative, permission-limited ZIP add-ons
+\n\n## 0.4.0 foundation delivered\n- [x] Monochrome appearance presets and green default accent\n- [x] Local listening history based on actual playback\n- [x] Remove fabricated home/discovery content\n- [x] Experimental blur preference with performance warning\n- [ ] Artwork-adaptive accent extraction\n- [ ] Real provider catalog/search adapters\n- [ ] Synced lyrics and immersive lyric renderer\n
