@@ -21,3 +21,14 @@
 ### Notes
 - Provider search, streaming catalogues, synced lyrics, album artwork and cloud history are not implemented in this milestone.
 - Android build not executed in this environment; see BUILD_STATUS.md.
+
+
+## 0.5.0 — YouTube Music backend foundation
+- Added NewPipeExtractor-based public YouTube Music song and album search.
+- Added on-demand audio stream resolution and album playback queue construction.
+- Removed the manual audio URL/paste-link playback UI.
+- Added SQLite search metadata caching, local saved tracks, and a 512 MiB Media3 LRU stream cache.
+- Added Supabase email sign-up/sign-in and saved-track cloud backup.
+- Added RLS-protected cloud tables for saved tracks, playlists, playlist tracks and player preferences.
+- Added third-party licensing notices for NewPipeExtractor.
+- Documented provider instability, account separation and remaining sync limitations.

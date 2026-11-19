@@ -1,8 +1,9 @@
-# Security and privacy notes
+# Security notes
 
-- The Android app must only contain the Supabase project URL and publishable/anon key.
-- Never embed service-role keys, database passwords, Discord client secrets or signing keys.
-- Enable Row Level Security on every user-owned table and test owner, accepted-friend and unrelated-user access.
-- Treat stream URLs and provider tokens as sensitive; do not log credentials.
-- Ask permission before publishing listening activity. Default profile visibility should remain friends-only with separate toggles for now-playing, history and statistics.
-- Provide account deletion and data export paths before public release.
+- The Supabase publishable/anon key is a client key, not a secret. Never embed a service-role key or database password in the app.
+- Supabase tables must retain row-level security. Apply both SQL migrations and verify policies in the Supabase dashboard before production use.
+- LyricGlow account passwords are sent only to the configured Supabase Auth endpoint over HTTPS and are not persisted by the app.
+- Access and refresh tokens are encrypted using an AES-GCM key stored in Android Keystore.
+- YouTube/Google credentials are not collected or stored. LyricGlow sign-in is a separate account.
+- Signed media URLs expire and are not written to the metadata database. The stream cache is private to the app sandbox.
+- The app currently stores saved metadata and cached stream bytes locally. Clear app data to remove them.

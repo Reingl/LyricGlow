@@ -1,3 +1,4 @@
-# Copy to local.properties and set your Android SDK path.
+# Copy to local.properties. Add your local Android SDK path if needed.
 # sdk.dir=/absolute/path/to/Android/Sdk
+# Supabase publishable/anon key (never use a service-role key in an Android app).
 SUPABASE_PUBLISHABLE_KEY=

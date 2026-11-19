@@ -19,8 +19,8 @@ android {
         applicationId = "com.lyricglow.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
         buildConfigField("String", "SUPABASE_URL", "\"https://ynssgivarefqlfaztlqk.supabase.co\"")
         buildConfigField(
             "String",
@@ -51,5 +51,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.0")
     implementation("androidx.media3:media3-exoplayer:1.6.1")
     implementation("androidx.media3:media3-session:1.6.1")
+    implementation("androidx.media3:media3-datasource:1.6.1")
+    implementation("androidx.media3:media3-database:1.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.27.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

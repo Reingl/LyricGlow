@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
@@ -37,12 +36,19 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.lyricglow.app.data.YoutubeMusicRepository
+import com.lyricglow.app.data.MusicTrack
+import com.lyricglow.app.auth.SupabaseAuthRepository
+import com.lyricglow.app.auth.SupabaseLibrarySync
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import java.util.concurrent.Executor
 
 private enum class HomeLayout(val label: String) { TOP_PICKS("Standard"), IMMERSIVE("Immersive") }
 private enum class VisualTheme(val label: String) { MONO_GREEN("Mono Green"), CARBON("Carbon"), PAPER("Paper") }
-private enum class AppPage { HOME, SEARCH, LIBRARY, PROFILE, PLAYER, APPEARANCE }
+private enum class AppPage { HOME, SEARCH, LIBRARY, PROFILE, PLAYER, APPEARANCE, ACCOUNT }
 
 private data class ListeningEntry(val title: String, val artist: String, val timestamp: Long)
 
@@ -127,9 +133,10 @@ private fun LyricGlowRoot(future: ListenableFuture<MediaController>) {
                 AppPage.APPEARANCE -> AppearancePage(layout, { layout = it }, theme, { theme = it },
                     glass, { glass = it }, forceBlur, { forceBlur = it }, accentIndex, { accentIndex = it }, topPicks, { topPicks = it }, recents, { recents = it },
                     moods, { moods = it }, colors) { page = AppPage.PROFILE }
-                AppPage.LIBRARY -> SimplePage("Your Library", "Your saved music and playlists will appear here.", colors) { page = AppPage.HOME }
-                AppPage.SEARCH -> SearchPage(colors) { page = AppPage.HOME }
-                AppPage.PROFILE -> ProfilePage(colors, onAppearance = { page = AppPage.APPEARANCE })
+                AppPage.LIBRARY -> LibraryPage(future, colors) { page = AppPage.HOME }
+                AppPage.SEARCH -> SearchPage(future, colors) { page = AppPage.HOME }
+                AppPage.PROFILE -> ProfilePage(colors, onAppearance = { page = AppPage.APPEARANCE }, onAccount = { page = AppPage.ACCOUNT })
+                AppPage.ACCOUNT -> AccountPage(colors) { page = AppPage.PROFILE }
                 AppPage.PLAYER -> PlayerPage(future, colors) { page = AppPage.HOME }
                 AppPage.HOME -> HomePage(layout, theme, glass, forceBlur, topPicks, recents, moods, history, ::recordHistory, colors, future,
                     onAppearance = { page = AppPage.PROFILE }, onNavigate = { page = it })
@@ -147,10 +154,8 @@ private fun HomePage(
 ) {
     var player by remember { mutableStateOf<MediaController?>(null) }
     var title by remember { mutableStateOf("Nothing playing") }
-    var artist by remember { mutableStateOf("Add an audio URL to start listening") }
+    var artist by remember { mutableStateOf("Search YouTube Music to start listening") }
     var playing by remember { mutableStateOf(false) }
-    var url by remember { mutableStateOf("") }
-    var showUrl by remember { mutableStateOf(false) }
     var queue by remember { mutableStateOf(listOf<String>()) }
     var connected by remember { mutableStateOf(false) }
 
@@ -188,19 +193,6 @@ private fun HomePage(
         }
     }
 
-    fun playUrl(append: Boolean) {
-        val clean = url.trim()
-        val p = player ?: return
-        if (!clean.startsWith("https://") && !clean.startsWith("http://")) return
-        val item = MediaItem.Builder().setUri(clean).setMediaMetadata(
-            MediaMetadata.Builder().setTitle(clean.substringAfterLast('/').ifBlank { "Audio stream" })
-                .setArtist("Direct stream").build()
-        ).build()
-        if (append) p.addMediaItem(item) else { p.setMediaItem(item); p.prepare(); p.play() }
-        queue = if (append) queue + item.mediaMetadata.title.toString() else listOf(item.mediaMetadata.title.toString())
-        url = ""
-        showUrl = false
-    }
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
@@ -227,7 +219,7 @@ private fun HomePage(
                 }
             } else {
                 SectionHeader("Your music", c)
-                Text(if (player?.currentMediaItem == null) "Nothing playing yet. Add an audio URL to start your library." else "Continue listening to $title", color = c.muted,
+                Text(if (player?.currentMediaItem == null) "Search YouTube Music to find something to play." else "Continue listening to $title", color = c.muted,
                     modifier = Modifier.padding(horizontal = 20.dp), fontSize = 13.sp)
             }
             if (showRecents && history.isNotEmpty()) {
@@ -237,18 +229,6 @@ private fun HomePage(
                 }
             }
 
-            if (showUrl) {
-                Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Play a direct audio URL", color = c.text, fontWeight = FontWeight.SemiBold)
-                    OutlinedTextField(url, { url = it }, Modifier.fillMaxWidth(),
-                        label = { Text("https://…") }, singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { playUrl(false) }, enabled = player != null && url.startsWith("http")) { Text("Play URL") }
-                        TextButton(onClick = { playUrl(true) }, enabled = player != null && url.startsWith("http")) { Text("Add to queue") }
-                    }
-                }
-            }
             if (queue.isNotEmpty()) {
                 SectionHeader("Queue · ${queue.size}", c)
                 queue.forEachIndexed { index, name ->
@@ -284,14 +264,12 @@ private fun HomePage(
             }
         }
 
-        TextButton(onClick = { showUrl = !showUrl }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text(if (showUrl) "Close audio URL" else "Add audio URL", color = c.muted)
-        }
+
     }
 }
 
 @Composable
-private fun ProfilePage(c: Palette, onAppearance: () -> Unit) {
+private fun ProfilePage(c: Palette, onAppearance: () -> Unit, onAccount: () -> Unit) {
     Column(Modifier.fillMaxSize().background(c.bg).verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Profile", color = c.text, fontSize = 29.sp, fontWeight = FontWeight.Bold)
@@ -307,10 +285,71 @@ private fun ProfilePage(c: Palette, onAppearance: () -> Unit) {
             }
         }
         Text("Settings", color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        ProfileSettingRow("Account", "Sign in to sync your library and preferences", "◎", c, onAccount)
         ProfileSettingRow("Appearance", "Themes, home screen and visual effects", "◐", c, onAppearance)
         ProfileSettingRow("Playback", "Playback behaviour and audio quality", "♫", c) { }
         ProfileSettingRow("Privacy", "Your profile and listening activity", "⌑", c) { }
         ProfileSettingRow("About LyricGlow", "Version, licences and help", "ⓘ", c) { }
+    }
+}
+
+@Composable
+private fun AccountPage(c: Palette, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val auth = remember { SupabaseAuthRepository(context) }
+    val scope = rememberCoroutineScope()
+    var email by remember { mutableStateOf(auth.email.orEmpty()) }
+    var password by remember { mutableStateOf("") }
+    var signedIn by remember { mutableStateOf(auth.isSignedIn) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxSize().background(c.bg).verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text("‹  Account", color = c.text, fontSize = 26.sp, modifier = Modifier.clickable { onBack() })
+        Text("LyricGlow account", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("This account syncs your LyricGlow library and settings. It is not a Google or YouTube sign-in.", color = c.muted)
+        if (signedIn) {
+            Text("Signed in as ${auth.email ?: email}", color = c.accent)
+            Button(onClick = {
+                busy = true; message = "Backing up saved tracks…"
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) { SupabaseLibrarySync(context).syncSavedTracks() }
+                    result.onSuccess { message = "Cloud backup complete · $it saved tracks" }.onFailure { message = it.message }
+                    busy = false
+                }
+            }, enabled = !busy) { Text("Sync saved tracks") }
+            OutlinedButton(onClick = { auth.signOut(); signedIn = false; message = "Signed out." }, enabled = !busy) { Text("Sign out") }
+        } else {
+            OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email") }, singleLine = true)
+            OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = {
+                    if (email.isBlank() || password.length < 6) { message = "Enter a valid email and a password with at least 6 characters."; return@Button }
+                    busy = true; message = null
+                    val secret = password.toCharArray(); password = ""
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { auth.signIn(email, secret) }
+                        result.onSuccess { signedIn = true; message = "Signed in." }.onFailure { message = it.message }
+                        busy = false
+                    }
+                }, enabled = !busy) { Text(if (busy) "Please wait…" else "Sign in") }
+                OutlinedButton(onClick = {
+                    if (email.isBlank() || password.length < 6) { message = "Enter a valid email and a password with at least 6 characters."; return@OutlinedButton }
+                    busy = true; message = null
+                    val secret = password.toCharArray(); password = ""
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { auth.signUp(email, secret) }
+                        result.onSuccess { created -> message = if (created) { signedIn = true; "Account created and signed in." } else "Account created. Check your email to confirm, then sign in." }
+                            .onFailure { message = it.message }
+                        busy = false
+                    }
+                }, enabled = !busy) { Text("Create account") }
+            }
+            Text("If email confirmation is enabled in Supabase, verify your address before signing in.", color = c.muted, fontSize = 12.sp)
+        }
+        message?.let { Text(it, color = if (it.contains("fail", true) || it.contains("enter", true)) Color(0xFFFFB45C) else c.accent) }
+        if (com.lyricglow.app.BuildConfig.SUPABASE_PUBLISHABLE_KEY.isBlank()) {
+            Text("Supabase publishable key is missing. Add SUPABASE_PUBLISHABLE_KEY to local.properties or the GitHub Actions secret.", color = Color(0xFFFFB45C), fontSize = 12.sp)
+        }
     }
 }
 
@@ -533,12 +572,154 @@ private fun SimplePage(title: String, subtitle: String, c: Palette, onBack: () -
 }
 
 @Composable
-private fun SearchPage(c: Palette, onBack: () -> Unit) {
+private fun LibraryPage(future: ListenableFuture<MediaController>, c: Palette, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val repository = remember { YoutubeMusicRepository(context) }
+    val scope = rememberCoroutineScope()
+    var player by remember { mutableStateOf<MediaController?>(null) }
+    var saved by remember { mutableStateOf(repository.savedTracks()) }
+    var message by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(future) {
+        future.addListener({ runCatching { player = future.get() } }, Executor { Handler(Looper.getMainLooper()).post(it) })
+        onDispose { }
+    }
+    Column(Modifier.fillMaxSize().background(c.bg).padding(20.dp)) {
+        Text("‹  Your Library", color = c.text, fontSize = 26.sp, modifier = Modifier.clickable { onBack() })
+        Spacer(Modifier.height(12.dp))
+        Text("Saved songs", color = c.text, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        message?.let { Text(it, color = c.muted) }
+        if (saved.isEmpty()) Text("Nothing saved yet. Search for music and tap Save to build your library.", color = c.muted, modifier = Modifier.padding(top = 12.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            itemsIndexed(saved, key = { _, track -> track.id }) { _, track ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(c.surface).clickable {
+                    val controller = player
+                    if (controller == null) { message = "Player is starting…"; return@clickable }
+                    message = "Preparing ${track.title}…"
+                    scope.launch {
+                        try {
+                            val stream = repository.resolveAudio(track.pageUrl)
+                            val item = MediaItem.Builder().setMediaId(track.id).setUri(stream.url).setMediaMetadata(
+                                MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
+                            controller.setMediaItem(item); controller.prepare(); controller.play(); message = "Now playing"
+                        } catch (e: Exception) { message = e.message ?: "Playback failed." }
+                    }
+                }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("♫", color = c.accent, fontSize = 24.sp, modifier = Modifier.padding(end = 12.dp))
+                    Column(Modifier.weight(1f)) { Text(track.title, color = c.text, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(track.artist, color = c.muted, fontSize = 12.sp) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchPage(future: ListenableFuture<MediaController>, c: Palette, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val repository = remember { YoutubeMusicRepository(context) }
+    val scope = rememberCoroutineScope()
+    var player by remember { mutableStateOf<MediaController?>(null) }
     var query by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().background(c.bg).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    var tracks by remember { mutableStateOf(emptyList<MusicTrack>()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var albums by remember { mutableStateOf(emptyList<com.lyricglow.app.data.MusicAlbum>()) }
+    var albumMode by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(future) {
+        future.addListener({ runCatching { player = future.get() } }, Executor { Handler(Looper.getMainLooper()).post(it) })
+        onDispose { }
+    }
+    fun search() {
+        if (query.trim().length < 2 || loading) return
+        loading = true; error = null; status = null
+        scope.launch {
+            try {
+                if (albumMode) albums = repository.searchAlbums(query)
+                else tracks = repository.search(query).tracks
+                if (albumMode && albums.isEmpty()) status = "No albums found. Try another search."
+                if (!albumMode && tracks.isEmpty()) status = "No songs found. Try another search."
+            } catch (e: Exception) { error = e.message ?: "Search failed." }
+            finally { loading = false }
+        }
+    }
+    fun play(track: MusicTrack, append: Boolean = false) {
+        val controller = player
+        if (controller == null) { error = "Player is still starting. Try again in a moment."; return }
+        status = "Preparing ${track.title}…"; error = null
+        scope.launch {
+            try {
+                val stream = repository.resolveAudio(track.pageUrl)
+                val metadata = MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist)
+                    .apply { track.artworkUrl?.let { setArtworkUri(android.net.Uri.parse(it)) } }.build()
+                val item = MediaItem.Builder().setMediaId(track.id).setUri(stream.url).setMediaMetadata(metadata).build()
+                if (append) controller.addMediaItem(item) else controller.setMediaItem(item)
+                if (!append) controller.prepare()
+                controller.play()
+                status = if (append) "Added to queue" else "Now playing"
+            } catch (e: Exception) { error = e.message ?: "Couldn't prepare this track."; status = null }
+        }
+    }
+
+    Column(Modifier.fillMaxSize().background(c.bg).padding(horizontal = 20.dp, vertical = 18.dp)) {
         Text("‹  Search", color = c.text, fontSize = 26.sp, modifier = Modifier.clickable { onBack() })
-        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Songs, artists, albums") })
-        Text("Provider search integration is a future milestone.", color = c.muted)
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
+            label = { Text("Songs, artists, albums") }, singleLine = true,
+            trailingIcon = { TextButton(onClick = ::search, enabled = !loading && query.trim().length >= 2) { Text("Search") } })
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 10.dp)) {
+            FilterChip(selected = !albumMode, onClick = { albumMode = false }, label = { Text("Songs") })
+            FilterChip(selected = albumMode, onClick = { albumMode = true }, label = { Text("Albums") })
+        }
+        if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = c.accent)
+        status?.let { Text(it, color = c.muted, modifier = Modifier.padding(vertical = 8.dp)) }
+        error?.let { Text(it, color = Color(0xFFFFB45C), modifier = Modifier.padding(vertical = 8.dp)) }
+        if (!albumMode) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                itemsIndexed(tracks, key = { _, item -> item.id }) { _, track ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(c.surface).clickable { play(track) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(c.raised), contentAlignment = Alignment.Center) { Text("♫", color = c.accent, fontSize = 22.sp) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(track.title, color = c.text, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                            Text(track.artist + if (track.durationSeconds > 0) " · ${formatTime(track.durationSeconds)}" else "", color = c.muted, fontSize = 12.sp, maxLines = 1)
+                        }
+                        TextButton(onClick = { repository.saveTrack(track); status = "Saved to your library" }) { Text("Save") }
+                        TextButton(onClick = { play(track, true) }) { Text("+ Queue") }
+                    }
+                }
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                itemsIndexed(albums, key = { _, item -> item.id }) { _, album ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(c.surface).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(8.dp)).background(c.raised), contentAlignment = Alignment.Center) { Text("▦", color = c.accent, fontSize = 22.sp) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) { Text(album.title, color = c.text, fontWeight = FontWeight.SemiBold); Text(album.artist, color = c.muted, fontSize = 12.sp) }
+                        TextButton(onClick = {
+                            scope.launch {
+                                loading = true; error = null; status = "Loading album…"
+                                try {
+                                    val list = repository.loadAlbum(album.pageUrl)
+                                    val controller = player ?: throw IllegalStateException("Player is still starting.")
+                                    val mediaItems = list.map { track ->
+                                        val stream = repository.resolveAudio(track.pageUrl)
+                                        MediaItem.Builder().setMediaId(track.id).setUri(stream.url).setMediaMetadata(
+                                            MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist)
+                                                .apply { track.artworkUrl?.let { setArtworkUri(android.net.Uri.parse(it)) } }.build()
+                                        ).build()
+                                    }
+                                    if (mediaItems.isEmpty()) throw IllegalStateException("This album has no playable tracks.")
+                                    controller.setMediaItems(mediaItems); controller.prepare(); controller.play()
+                                    status = "Playing album · ${mediaItems.size} tracks"
+                                } catch (e: Exception) { error = e.message ?: "Couldn't load album."; status = null }
+                                finally { loading = false }
+                            }
+                        }) { Text("Play album") }
+                    }
+                }
+            }
+        }
     }
 }
 
