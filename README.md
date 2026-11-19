@@ -1,43 +1,35 @@
 # LyricGlow Android
 
-An ad-free, customisable Android music app foundation. Version 0.3.0 adds selectable home layouts, persistent appearance settings, skeletal theme previews, and retains the Media3 direct-stream playback foundation.
+An ad-free, customisable Android music app foundation. Version **0.4.0** refreshes the interface around a monochrome visual system, adds persistent accent customisation, and records real local listening history.
 
-## Included in this milestone
-- Kotlin + Jetpack Compose app shell
-- Media3 ExoPlayer playback service and Android MediaSession
-- Notification, lock-screen, Bluetooth and headset media controls
-- Direct audio/stream URL playback and queue add/remove
-- Playback seek controls and full-screen player
-- Two home layouts: Top Picks and Immersive
-- Three visual themes: Crystal, Nocturne and Atelier
-- Persistent four-tab navigation: Home, Search, Library and Profile
-- Profile includes Settings > Appearance with persistent layout/theme/section preferences
-- Lightweight skeletal previews that do not load album art
-- Adaptive translucent-surface toggle (native real-time blur renderer is not yet implemented)
-- Supabase URL and publishable-key configuration placeholder
-- Initial database migration retained as a future backend foundation
+## What is included
+- Kotlin + Jetpack Compose app shell.
+- Media3 ExoPlayer playback service and Android MediaSession.
+- Notification, lock-screen, Bluetooth and headset media controls.
+- Direct audio/stream URL playback, queue add/remove, seek controls and full-screen player.
+- Standard and Immersive home layouts.
+- Mono Green (default), Carbon and Paper themes.
+- Five selectable accent colours, saved across launches.
+- Local Recently Played history: a track is recorded only after it has actually played for at least 10 seconds; up to 30 entries are retained.
+- Optional translucent player surface and experimental forced blur toggle with an in-app performance warning.
+- Four-tab navigation: Home, Search, Library and Profile.
+- Supabase URL and publishable-key configuration placeholder; initial database migration retained.
 
-## Important scope
-This is a working source-project milestone, not a finished YouTube Music replacement. It currently plays direct audio URLs that the app is allowed to access. Provider integrations, account sign-in, synced lyrics, real album-art recommendations, native real-time Liquid Glass blur, and production cloud sync remain future milestones.
+## Honest feature boundaries
+This is not yet a YouTube Music replacement. Playback currently supports direct audio URLs the app can access. Search/provider integration, account sign-in, synced lyrics, real album art, recommendation feeds, cloud history sync and a full-screen effect renderer are not implemented. The home screen intentionally does not invent songs, albums, mixes or recommendations. The Library remains an honest empty state until library persistence is implemented.
 
-## Open and build
-1. Download and extract this ZIP.
-2. Open the extracted `LyricGlow` folder in Android Studio.
-3. Install Android SDK Platform 36 and compatible Build Tools when prompted.
-4. Let Gradle sync and build the `app` configuration.
-5. Run on Android 8.0 (API 26) or newer.
+Forced blur uses Compose's blur modifier on the mini-player layer. Android versions, GPU drivers and device performance can still limit the effect; the setting cannot override platform-level rendering restrictions.
 
-The ZIP intentionally excludes machine-specific `local.properties`, signing keys, and the Gradle wrapper JAR. Android Studio can configure the SDK path. The GitHub Actions workflow uses JDK 17, Android SDK 36 and Gradle 8.11.1 to build a debug APK.
+## Build
+1. Extract the ZIP and open the `LyricGlow-main` folder in Android Studio.
+2. Install Android SDK Platform 36 and compatible Build Tools.
+3. Sync Gradle and build the `app` configuration.
+4. Run on Android 8.0 (API 26) or newer.
+
+The source archive excludes machine-specific `local.properties`, signing keys and the Gradle wrapper JAR. The GitHub Actions workflow builds with JDK 17, Android SDK 36 and Gradle 8.11.1.
 
 ## Supabase configuration
-The Supabase project URL is configured in `app/build.gradle.kts`. Copy `local.properties.example` to `local.properties` and set `SUPABASE_PUBLISHABLE_KEY` if/when the Supabase client is enabled. Never put a service-role key, database password, or OAuth client secret in the Android app or public repository.
+The project URL is configured in `app/build.gradle.kts`. Copy `local.properties.example` to `local.properties` and set `SUPABASE_PUBLISHABLE_KEY` if/when a Supabase client is enabled. Never put a service-role key, database password or OAuth client secret in the Android app or public repository.
 
 ## Build verification
-This source ZIP was assembled from the repository source and updated for the appearance and navigation milestone. It has not been compiled against an Android SDK in this environment. Run Gradle sync/build before treating it as verified.
-
-
-## 0.4.0 update
-
-The current UI uses a monochrome design system with Mono Green as the default accent, plus Carbon and Paper themes. Recently Played is populated from actual playback starts and stored locally on-device; it remains empty until music has been played. Demo catalogue cards and fabricated track names have been removed.
-
-Appearance settings include a best-effort experimental blur option. Android version, device GPU, and system rendering support still determine whether blur can be rendered; the option cannot bypass platform limitations. See [CHANGELOG.md](CHANGELOG.md) for details.
+The source has been edited and statically inspected in this environment, but no Android SDK/Gradle installation was available to run `assembleDebug`. Treat the first GitHub Actions or Android Studio build as the compile verification step. See `BUILD_STATUS.md` for details.

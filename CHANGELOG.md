@@ -1,15 +1,23 @@
 # Changelog
 
-## 0.4.0 — UI and listening-history foundation
+## 0.4.0 — 2026-11-19
 
-- Replaced the blue/purple appearance presets with **Mono Green** (default), **Carbon**, and **Paper** palettes.
-- Reworked the home screen to remove fabricated songs, albums, recommendation cards, and mood shortcuts. Empty sections no longer imply that demo content is real.
-- Added local Recently Played history. Tracks are recorded when playback actually starts, retained across app restarts, deduplicated, and capped at 30 entries.
-- Added a best-effort experimental forced-blur toggle and a yellow warning about possible lag, battery use, and rendering glitches. Android/platform limitations still apply; this cannot force unsupported hardware or OS APIs to provide true backdrop blur.
-- Removed fabricated discovery items from the Library placeholder.
-- Preserved the existing Media3 player, service, queue, and direct audio URL playback architecture.
+### Changed
+- Replaced Crystal/Nocturne/Atelier palettes with Mono Green (default), Carbon and Paper.
+- Reworked the home screen to show current playback state instead of fabricated promotional content.
+- Renamed the first home layout to Standard in the appearance selector.
+- Updated application version to 0.4.0 (versionCode 4).
+
+### Added
+- Five persistent accent colour choices.
+- Local Recently Played history, recorded after 10 seconds of active playback and limited to 30 entries.
+- Experimental forced blur preference and an explicit yellow performance warning.
+- Empty-state messaging for unimplemented Library content.
+
+### Removed
+- Hardcoded fake recent tracks, sample albums, promotional mixes, new-release cards and mood shortcuts.
+- Fake discovery category rows from the Library placeholder.
 
 ### Notes
-
-- Provider search, catalogue browsing, synced lyrics, artwork extraction, and cloud listening sync remain future work; this update does not pretend those integrations exist.
-- Listening history is stored locally in app preferences. It is not uploaded to Supabase.
+- Provider search, streaming catalogues, synced lyrics, album artwork and cloud history are not implemented in this milestone.
+- Android build not executed in this environment; see BUILD_STATUS.md.

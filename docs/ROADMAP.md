@@ -5,14 +5,15 @@
 - [x] Direct URL playback
 - [x] Queue controls and seek UI
 
-## Milestone 2 — home and appearance foundation
-- [x] Top Picks and Immersive home layouts
-- [x] Crystal, Nocturne and Atelier theme tokens
-- [x] Settings > Appearance home layout selector
-- [x] Skeletal theme previews
-- [x] Persist home layout, theme and visible sections
+## Milestone 2 — home and appearance refresh (0.4.0)
+- [x] Standard and Immersive home layouts
+- [x] Mono Green, Carbon and Paper theme tokens
+- [x] Persistent accent colour selection
+- [x] Remove fabricated songs, albums, mixes and recommendation cards
+- [x] Recently Played only reflects real playback (10-second threshold, local storage)
+- [x] Experimental forced blur option and performance warning
 - [ ] Reorderable home sections and live artwork data
-- [ ] Full visual regression and Android device build verification
+- [ ] Android device build and visual regression verification
 
 ## Milestone 3 — library and providers
 - [ ] Room persistence for tracks, playlists and queue
@@ -31,4 +32,3 @@
 - [ ] AGSL shader/effect renderer with performance controls
 - [ ] Component-level customization and import/export presets
 - [ ] Declarative, permission-limited ZIP add-ons
-\n\n## 0.4.0 foundation delivered\n- [x] Monochrome appearance presets and green default accent\n- [x] Local listening history based on actual playback\n- [x] Remove fabricated home/discovery content\n- [x] Experimental blur preference with performance warning\n- [ ] Artwork-adaptive accent extraction\n- [ ] Real provider catalog/search adapters\n- [ ] Synced lyrics and immersive lyric renderer\n

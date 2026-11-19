@@ -40,9 +40,11 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.Executor
 
-private enum class HomeLayout(val label: String) { TOP_PICKS("Top Picks"), IMMERSIVE("Immersive") }
+private enum class HomeLayout(val label: String) { TOP_PICKS("Standard"), IMMERSIVE("Immersive") }
 private enum class VisualTheme(val label: String) { MONO_GREEN("Mono Green"), CARBON("Carbon"), PAPER("Paper") }
 private enum class AppPage { HOME, SEARCH, LIBRARY, PROFILE, PLAYER, APPEARANCE }
+
+private data class ListeningEntry(val title: String, val artist: String, val timestamp: Long)
 
 private data class Palette(
     val bg: Color, val surface: Color, val raised: Color, val text: Color,
@@ -50,9 +52,12 @@ private data class Palette(
 )
 
 private fun palette(theme: VisualTheme) = when (theme) {
-    VisualTheme.MONO_GREEN -> Palette(Color(0xFF080A08), Color(0xFF171B17), Color(0xFF252C25), Color(0xFFF4F7F2), Color(0xFF9AA49A), Color(0xFF8BE28B), Color(0xFF263D2A), Color(0xFF101A12))
-    VisualTheme.CARBON -> Palette(Color(0xFF090A0B), Color(0xFF181A1D), Color(0xFF292C30), Color(0xFFF5F6F7), Color(0xFFA0A4AA), Color(0xFFBFC7C2), Color(0xFF343B38), Color(0xFF111514))
-    VisualTheme.PAPER -> Palette(Color(0xFFF1F2EF), Color(0xFFFFFFFF), Color(0xFFE2E6DF), Color(0xFF171B17), Color(0xFF687168), Color(0xFF347A43), Color(0xFFC9DCCB), Color(0xFFE7EEE6))
+    VisualTheme.MONO_GREEN -> Palette(Color(0xFF080A09), Color(0xFF171B18), Color(0xFF252D28),
+        Color(0xFFF4F7F4), Color(0xFFA1ADA4), Color(0xFF69D391), Color(0xFF244B35), Color(0xFF101B14))
+    VisualTheme.CARBON -> Palette(Color(0xFF090A0B), Color(0xFF191B1E), Color(0xFF292D31),
+        Color(0xFFF4F5F6), Color(0xFFA5A9AE), Color(0xFFB8C2BC), Color(0xFF343B38), Color(0xFF111513))
+    VisualTheme.PAPER -> Palette(Color(0xFFF2F3EF), Color(0xFFFFFFFF), Color(0xFFE2E7DF),
+        Color(0xFF172019), Color(0xFF657168), Color(0xFF24834C), Color(0xFFB7D8C1), Color(0xFFE6EEE7))
 }
 
 class MainActivity : ComponentActivity() {
@@ -91,29 +96,42 @@ private fun LyricGlowRoot(future: ListenableFuture<MediaController>) {
     var theme by remember {
         mutableStateOf(runCatching { VisualTheme.valueOf(prefs.getString("visual_theme", "MONO_GREEN")!!) }.getOrDefault(VisualTheme.MONO_GREEN))
     }
-    var glass by remember { mutableStateOf(prefs.getBoolean("glass_enabled", true)) }
+    var glass by remember { mutableStateOf(prefs.getBoolean("glass_enabled", false)) }
     var forceBlur by remember { mutableStateOf(prefs.getBoolean("force_blur", false)) }
+    var accentIndex by remember { mutableIntStateOf(prefs.getInt("accent_index", 0)) }
+    val accentOptions = listOf(Color(0xFF69D391), Color(0xFF69B7E8), Color(0xFFE7B86A), Color(0xFFD58BE8), Color(0xFFE77F8B))
+    val historyPrefs = remember { context.getSharedPreferences("lyricglow_history", 0) }
+    var history by remember { mutableStateOf(historyPrefs.getString("entries", "")!!.split("\n").filter { it.contains("\u001f") }.mapNotNull { row -> val a = row.split("\u001f"); if (a.size == 3) ListeningEntry(a[0], a[1], a[2].toLongOrNull() ?: 0L) else null }) }
+    var topPicks by remember { mutableStateOf(prefs.getBoolean("show_top_picks", true)) }
     var recents by remember { mutableStateOf(prefs.getBoolean("show_recents", true)) }
+    var moods by remember { mutableStateOf(prefs.getBoolean("show_moods", true)) }
     var page by remember { mutableStateOf(AppPage.HOME) }
 
-    LaunchedEffect(layout, theme, glass, forceBlur, recents) {
+    LaunchedEffect(layout, theme, glass, forceBlur, accentIndex, topPicks, recents, moods) {
         prefs.edit().putString("home_layout", layout.name).putString("visual_theme", theme.name)
-            .putBoolean("glass_enabled", glass).putBoolean("force_blur", forceBlur)
-            .putBoolean("show_recents", recents).apply()
+             .putBoolean("glass_enabled", glass).putBoolean("force_blur", forceBlur).putInt("accent_index", accentIndex).putBoolean("show_top_picks", topPicks)
+            .putBoolean("show_recents", recents).putBoolean("show_moods", moods).apply()
     }
 
-    val colors = palette(theme)
+    val colors = palette(theme).copy(accent = accentOptions[accentIndex.coerceIn(accentOptions.indices)])
+    fun recordHistory(entry: ListeningEntry) {
+        val now = System.currentTimeMillis()
+        val updated = (listOf(entry.copy(timestamp = now)) + history.filterNot { it.title == entry.title && it.artist == entry.artist && now - it.timestamp < 30 * 60 * 1000L }).take(30)
+        history = updated
+        historyPrefs.edit().putString("entries", updated.joinToString("\n") { "${it.title}\u001f${it.artist}\u001f${it.timestamp}" }).apply()
+    }
     val mainTab = page == AppPage.HOME || page == AppPage.SEARCH || page == AppPage.LIBRARY || page == AppPage.PROFILE
     Column(Modifier.fillMaxSize().background(colors.bg)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (page) {
                 AppPage.APPEARANCE -> AppearancePage(layout, { layout = it }, theme, { theme = it },
-                    glass, { glass = it }, forceBlur, { forceBlur = it }, recents, { recents = it }, colors) { page = AppPage.PROFILE }
+                    glass, { glass = it }, forceBlur, { forceBlur = it }, accentIndex, { accentIndex = it }, topPicks, { topPicks = it }, recents, { recents = it },
+                    moods, { moods = it }, colors) { page = AppPage.PROFILE }
                 AppPage.LIBRARY -> SimplePage("Your Library", "Your saved music and playlists will appear here.", colors) { page = AppPage.HOME }
                 AppPage.SEARCH -> SearchPage(colors) { page = AppPage.HOME }
                 AppPage.PROFILE -> ProfilePage(colors, onAppearance = { page = AppPage.APPEARANCE })
                 AppPage.PLAYER -> PlayerPage(future, colors) { page = AppPage.HOME }
-                AppPage.HOME -> HomePage(layout, theme, glass, forceBlur, recents, colors, future,
+                AppPage.HOME -> HomePage(layout, theme, glass, forceBlur, topPicks, recents, moods, history, ::recordHistory, colors, future,
                     onAppearance = { page = AppPage.PROFILE }, onNavigate = { page = it })
             }
         }
@@ -123,11 +141,10 @@ private fun LyricGlowRoot(future: ListenableFuture<MediaController>) {
 
 @Composable
 private fun HomePage(
-    layout: HomeLayout, theme: VisualTheme, glass: Boolean, forceBlur: Boolean, showRecents: Boolean,
-    c: Palette, future: ListenableFuture<MediaController>,
+    layout: HomeLayout, theme: VisualTheme, glass: Boolean, forceBlur: Boolean, showPicks: Boolean, showRecents: Boolean,
+    showMoods: Boolean, history: List<ListeningEntry>, onHistory: (ListeningEntry) -> Unit, c: Palette, future: ListenableFuture<MediaController>,
     onAppearance: () -> Unit, onNavigate: (AppPage) -> Unit
 ) {
-    val context = LocalContext.current
     var player by remember { mutableStateOf<MediaController?>(null) }
     var title by remember { mutableStateOf("Nothing playing") }
     var artist by remember { mutableStateOf("Add an audio URL to start listening") }
@@ -136,23 +153,6 @@ private fun HomePage(
     var showUrl by remember { mutableStateOf(false) }
     var queue by remember { mutableStateOf(listOf<String>()) }
     var connected by remember { mutableStateOf(false) }
-    val historyPrefs = remember { context.getSharedPreferences("lyricglow_history", 0) }
-    var history by remember {
-        mutableStateOf(historyPrefs.getString("items", "")!!.split("\n").filter { it.contains("|") }
-            .mapNotNull { row ->
-                val parts = row.split("|", limit = 3)
-                if (parts.size == 3) Triple(parts[0], parts[1], parts[2].toLongOrNull() ?: 0L) else null
-            })
-    }
-    fun rememberTrack() {
-        val p = player ?: return
-        val item = p.currentMediaItem ?: return
-        val t = item.mediaMetadata.title?.toString()?.takeIf { it.isNotBlank() } ?: return
-        val a = item.mediaMetadata.artist?.toString() ?: "Unknown artist"
-        val entry = Triple(t.replace("|", " "), a.replace("|", " "), System.currentTimeMillis())
-        history = (listOf(entry) + history.filterNot { it.first == entry.first && it.second == entry.second }).take(30)
-        historyPrefs.edit().putString("items", history.joinToString("\n") { "${it.first}|${it.second}|${it.third}" }).apply()
-    }
 
     DisposableEffect(future) {
         val listener = Runnable { runCatching { player = future.get(); connected = true }.onFailure { connected = false } }
@@ -167,9 +167,7 @@ private fun HomePage(
                 artist = mediaItem?.mediaMetadata?.artist?.toString() ?: "Unknown artist"
                 queue = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).mediaMetadata.title?.toString() ?: "Audio" }
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                playing = isPlaying
-            }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
         }
         p.addListener(listener)
         if (p.currentMediaItem != null) {
@@ -179,10 +177,14 @@ private fun HomePage(
         }
         onDispose { p.removeListener(listener) }
     }
-    LaunchedEffect(player, playing, title) {
-        if (player != null && playing && title != "Nothing playing") {
-            delay(10_000)
-            if (player?.isPlaying == true) rememberTrack()
+
+    LaunchedEffect(player, playing, title, artist) {
+        val activePlayer = player ?: return@LaunchedEffect
+        if (!playing || title == "Nothing playing") return@LaunchedEffect
+        delay(10_000)
+        if (activePlayer.isPlaying && activePlayer.currentMediaItem != null &&
+            activePlayer.currentMediaItem?.mediaMetadata?.title?.toString() == title) {
+            onHistory(ListeningEntry(title, artist, System.currentTimeMillis()))
         }
     }
 
@@ -214,22 +216,27 @@ private fun HomePage(
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            Text(if (layout == HomeLayout.TOP_PICKS) "Your music" else "Listening space",
-                color = c.text, fontSize = 27.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp))
+            if (layout == HomeLayout.IMMERSIVE) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(220.dp)
+                    .clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(c.heroA, c.heroB)))) {
+                    Column(Modifier.align(Alignment.BottomStart).padding(22.dp)) {
+                        Text("NOW PLAYING", color = Color.White.copy(alpha = .72f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                        Text(artist, color = Color.White.copy(alpha = .8f), fontSize = 13.sp)
+                    }
+                }
+            } else {
+                SectionHeader("Your music", c)
+                Text(if (player?.currentMediaItem == null) "Nothing playing yet. Add an audio URL to start your library." else "Continue listening to $title", color = c.muted,
+                    modifier = Modifier.padding(horizontal = 20.dp), fontSize = 13.sp)
+            }
             if (showRecents && history.isNotEmpty()) {
                 SectionHeader("Recently Played", c)
-                history.forEach { item ->
-                    RecentItem(item.first, item.second, "♫", c.raised, c) { }
-                }
-            } else if (showRecents) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(18.dp)).background(c.surface).padding(18.dp)) {
-                    Text("Nothing here yet", color = c.text, fontWeight = FontWeight.SemiBold)
-                    Text("Your recently played music will appear after you start listening.",
-                        color = c.muted, fontSize = 13.sp)
+                history.forEach { entry ->
+                    RecentItem(entry.title, entry.artist, "♫", c.raised, c) { }
                 }
             }
+
             if (showUrl) {
                 Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Play a direct audio URL", color = c.text, fontWeight = FontWeight.SemiBold)
@@ -258,9 +265,9 @@ private fun HomePage(
 
         if (player?.currentMediaItem != null || title != "Nothing playing") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 7.dp)
-                .then(if (forceBlur) Modifier.blur(10.dp) else Modifier)
                 .clip(RoundedCornerShape(30.dp))
-                .background(if (glass) c.surface.copy(alpha = .92f) else c.surface)
+                .background(if (glass || forceBlur) c.surface.copy(alpha = .72f) else c.surface)
+                .then(if (forceBlur) Modifier.blur(18.dp) else Modifier)
                 .clickable { onNavigate(AppPage.PLAYER) }.padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(42.dp).clip(CircleShape).background(c.accent.copy(alpha = .28f)),
@@ -335,8 +342,9 @@ private fun MainTabBar(selected: AppPage, c: Palette, onSelect: (AppPage) -> Uni
 @Composable
 private fun AppearancePage(
     layout: HomeLayout, onLayout: (HomeLayout) -> Unit, theme: VisualTheme, onTheme: (VisualTheme) -> Unit,
-    glass: Boolean, onGlass: (Boolean) -> Unit, forceBlur: Boolean, onForceBlur: (Boolean) -> Unit,
-    recents: Boolean, onRecents: (Boolean) -> Unit, c: Palette, onBack: () -> Unit
+    glass: Boolean, onGlass: (Boolean) -> Unit, forceBlur: Boolean, onForceBlur: (Boolean) -> Unit, accentIndex: Int, onAccent: (Int) -> Unit, picks: Boolean, onPicks: (Boolean) -> Unit,
+    recents: Boolean, onRecents: (Boolean) -> Unit, moods: Boolean, onMoods: (Boolean) -> Unit,
+    c: Palette, onBack: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -356,18 +364,27 @@ private fun AppearancePage(
                 LayoutPreview(HomeLayout.IMMERSIVE, layout == HomeLayout.IMMERSIVE, c, Modifier.weight(1f)) { onLayout(HomeLayout.IMMERSIVE) }
             }
             Text("Visual Theme", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            Text("Lightweight skeletal previews; no album artwork is loaded.", color = c.muted, fontSize = 12.sp)
+            Text("Minimal surfaces with an adjustable accent.", color = c.muted, fontSize = 12.sp)
             VisualTheme.values().forEach { item -> ThemePreview(item, theme == item, c) { onTheme(item) } }
-            Text("Listening history", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            ToggleRow("Recently Played", "Show tracks you have actually listened to.", recents, onRecents, c)
+            Text("Accent Colour", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(Color(0xFF69D391), Color(0xFF69B7E8), Color(0xFFE7B86A), Color(0xFFD58BE8), Color(0xFFE77F8B)).forEachIndexed { index, color ->
+                    Box(Modifier.size(38.dp).clip(CircleShape).background(color).clickable { onAccent(index) }, contentAlignment = Alignment.Center) {
+                        if (accentIndex == index) Text("✓", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Text("Home Sections", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+            ToggleRow("Recently Played", "Show real listening history only", recents, onRecents, c)
             Text("Effects", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            ToggleRow("Glass surfaces", "Translucent player and panel surfaces.", glass, onGlass, c)
-            ToggleRow("Force blur (experimental)", "Try blur even when the device does not report support.", forceBlur, onForceBlur, c)
+            ToggleRow("Translucent surfaces", "Use semi-transparent player surfaces", glass, onGlass, c)
+            ToggleRow("Force blur (experimental)", "Apply blur even when device support is uncertain", forceBlur, onForceBlur, c)
             if (forceBlur) {
-                Text("⚠ Forced blur may cause lag, battery drain, or rendering glitches on unsupported devices.",
-                    color = Color(0xFFFFC857), fontSize = 12.sp,
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x22FFC857)).padding(12.dp))
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFE08A)).padding(12.dp), verticalAlignment = Alignment.Top) {
+                    Text("⚠", color = Color(0xFF5A3A00), fontSize = 18.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Forced blur may cause lag, extra battery use, or rendering issues. Disable it if the interface stutters. Android versions and GPUs may still limit blur support.", color = Color(0xFF5A3A00), fontSize = 12.sp)
+                }
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -426,9 +443,9 @@ private fun ThemePreview(theme: VisualTheme, selected: Boolean, c: Palette, onCl
         Column(Modifier.weight(1f)) {
             Text(theme.label, color = c.text, fontWeight = FontWeight.SemiBold)
             Text(when (theme) {
-                VisualTheme.MONO_GREEN -> "Monochrome surfaces with green highlights"
-                VisualTheme.CARBON -> "Neutral graphite with soft highlights"
-                VisualTheme.PAPER -> "Light surfaces with green highlights"
+                VisualTheme.MONO_GREEN -> "Monochrome with a green accent"
+                VisualTheme.CARBON -> "Neutral dark surfaces"
+                VisualTheme.PAPER -> "Clean light surfaces"
             }, color = c.muted, fontSize = 11.sp)
         }
         Text(if (selected) "✓" else "○", color = c.accent, fontSize = 21.sp)
@@ -510,8 +527,8 @@ private fun SimplePage(title: String, subtitle: String, c: Palette, onBack: () -
     Column(Modifier.fillMaxSize().background(c.bg).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("‹  $title", color = c.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onBack() })
         Text(subtitle, color = c.muted)
-        Text("This section is waiting for a music provider or library source.",
-            color = c.muted, fontSize = 13.sp)
+        Text("Your library is empty", color = c.text, fontWeight = FontWeight.SemiBold)
+        Text("Saved tracks and playlists will appear here when library support is connected.", color = c.muted)
     }
 }
 
@@ -532,6 +549,21 @@ private fun SectionHeader(title: String, c: Palette) {
 }
 
 @Composable
+private fun PromoCard(title: String, subtitle: String, detail: String, a: Color, b: Color, width: androidx.compose.ui.unit.Dp, c: Palette) {
+    Box(Modifier.width(width).height(300.dp).clip(RoundedCornerShape(20.dp))
+        .background(Brush.verticalGradient(listOf(a, b)))) {
+        Column(Modifier.fillMaxSize().padding(17.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black, maxLines = 2)
+            Column {
+                Text(subtitle, color = Color.White.copy(alpha = .75f), fontSize = 14.sp)
+                Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text(detail, color = Color.White.copy(alpha = .78f), fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecentItem(title: String, artist: String, glyph: String, color: Color, c: Palette, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp).clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically) {
@@ -544,6 +576,24 @@ private fun RecentItem(title: String, artist: String, glyph: String, color: Colo
             Text(artist, color = c.muted, fontSize = 14.sp, maxLines = 1)
         }
         Text("⋮", color = c.muted, fontSize = 23.sp)
+    }
+}
+
+@Composable
+private fun AlbumTile(title: String, artist: String, color: Color, c: Palette) {
+    Column(Modifier.width(126.dp)) {
+        Box(Modifier.fillMaxWidth().height(126.dp).clip(RoundedCornerShape(14.dp)).background(color),
+            contentAlignment = Alignment.Center) { Text("♫", color = Color.White, fontSize = 38.sp) }
+        Spacer(Modifier.height(7.dp))
+        Text(title, color = c.text, fontWeight = FontWeight.Medium, maxLines = 1)
+        Text(artist, color = c.muted, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun MoodChip(label: String, c: Palette) {
+    Box(Modifier.clip(CircleShape).background(c.raised).padding(horizontal = 17.dp, vertical = 10.dp)) {
+        Text(label, color = c.text, fontSize = 13.sp)
     }
 }
 
