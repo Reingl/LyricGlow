@@ -9,6 +9,9 @@
     <!-- the anime icons' splash, only told apart on android 12+ (values-v31) -->
     <style name="Theme.App.Starting.Icon" parent="Theme.App.Starting" />
 
+    <!-- Compatibility alias retained for upstream activities and the application manifest. -->
+    <style name="Theme.mochy" parent="Theme.LyricGlow" />
+
     <style name="Theme.LyricGlow" parent="android:Theme.Material.NoActionBar">
         <item name="android:fontFamily">@font/inter</item>
         <item name="fontFamily">@font/inter</item>

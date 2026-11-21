@@ -11,3 +11,8 @@
 - Replaced upstream-facing README with LyricGlow product direction, build notes, limitations, and derivative attribution.
 - Added `UPSTREAM.md` and this changelog.
 - Retained Mochy's existing search, catalogue, playback, album/playlist queues, local library, database, caching, lyrics, download, account/sync, and customisation implementations rather than rebuilding those systems.
+
+## 0.1.1 — CI resource-linking hotfix
+
+- Added `Theme.mochy` as a compatibility alias inheriting from `Theme.LyricGlow`, because existing manifest activities still reference the upstream style name.
+- Documented the separate Kotlin compiler failure as unresolved until its actual compiler diagnostic is supplied.
