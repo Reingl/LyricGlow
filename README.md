@@ -1,47 +1,37 @@
-# LyricGlow Android
+# LyricGlow
 
-An ad-free, highly customisable Android music client built around YouTube Music's public catalogue. Version **0.5.0** introduces the first real provider and playback backend.
+**An ad-free, highly customisable YouTube Music client for Android.**
 
-## Included in 0.5.0
-- YouTube Music-compatible public catalogue search for songs and albums, powered by NewPipeExtractor.
-- Real song search results with title, artist, duration and artwork metadata.
-- Album search and album playback queueing.
-- Audio stream resolution on demand; expiring signed stream URLs are never persisted.
-- Media3 ExoPlayer background playback, system media session, notification/lock-screen/Bluetooth controls and queue support.
-- Gapless-capable Media3 playlist playback.
-- 512 MiB LRU streaming cache for recently played audio segments, plus a seven-day SQLite metadata cache.
-- Local saved-track library.
-- Optional LyricGlow account sign-up/sign-in through Supabase Auth and a saved-track cloud backup action.
-- Supabase migration for saved tracks, user playlists, playlist tracks and playback preferences with row-level security.
-- Mono Green, Carbon and Paper themes, selectable accents, home layouts and experimental forced blur.
+LyricGlow is a branded derivative of [Mochy Music](https://github.com/realidkroo/Mochy-Music). It keeps Mochy's mature Android playback, catalogue, provider, library, cache, lyrics, and customisation architecture while applying LyricGlow's own visual identity: deep black surfaces, crisp white typography, and vivid green accents.
 
-## Important provider/account notes
-LyricGlow is an unofficial third-party client. YouTube Music does not offer a supported public API for this full client workflow; NewPipeExtractor parses public YouTube endpoints and can break when YouTube changes them. Search and stream extraction may be rate-limited, unavailable for some tracks, or temporarily broken. This integration does not bypass age gates, account restrictions, Premium entitlements or other access controls. It does not use or store Google passwords/cookies.
+## Product direction
 
-The LyricGlow account is a separate Supabase account used for LyricGlow cloud features. It is **not** a YouTube/Google login. The current sync action backs up saved tracks; full two-way sync for playlists, history and player preferences is a later milestone.
+- YouTube Music-first catalogue discovery and search.
+- Background playback, queue management, album and playlist playback.
+- Persistent local library, history, downloads, and media cache.
+- Lyrics with provider integrations and immersive player options.
+- Extensive player, layout, theme, and effect customisation.
+- Optional account and sync integrations; listening locally does not require a LyricGlow account.
+- No LyricGlow advertising SDK or in-app ad placements.
 
-NewPipeExtractor is GPL-3.0-or-later. Review `LICENSE` and `THIRD_PARTY_NOTICES.md` before redistributing builds. Its use may affect the licensing obligations of distributed LyricGlow binaries.
+Availability of third-party catalogue and stream endpoints depends on upstream services and may change. LyricGlow is an independent client and is not affiliated with or endorsed by YouTube or Google. It does not provide paid YouTube Premium entitlements or bypass access restrictions.
 
 ## Build
-1. Extract the ZIP and open `LyricGlow-main` in Android Studio.
-2. Install Android SDK Platform 36 and compatible Build Tools.
-3. Sync Gradle and build the `app` configuration.
-4. Run on Android 8.0 (API 26) or newer.
 
-The archive excludes machine-specific `local.properties`, signing keys and the Gradle wrapper JAR. GitHub Actions installs Gradle 8.11.1 and Android SDK 36.
+This project uses the Gradle wrapper and Android Gradle Plugin configuration supplied by the upstream project.
 
-## Supabase setup
-1. In Supabase, enable Email authentication and configure email confirmation as desired.
-2. Run `backend/supabase/migrations/001_initial_schema.sql`, then `002_music_backend.sql` in the SQL editor.
-3. Copy `local.properties.example` to `local.properties` and set `SUPABASE_PUBLISHABLE_KEY=your_publishable_or_anon_key`.
-4. For GitHub Actions, add the same value as repository secret `SUPABASE_PUBLISHABLE_KEY`.
+```bash
+./gradlew :app:assembleUniversalFossDebug
+```
 
-Never put a service-role key, database password or OAuth client secret in the Android app or public repository. The publishable/anon key is intended to be exposed in client apps; database access is constrained by RLS.
+If your environment does not have Android SDK 37 installed, install the SDK platform and matching build tools required by the Gradle build.
 
-## Cache behaviour
-- Search metadata cache: SQLite, seven-day expiry.
-- Audio stream cache: Media3 `SimpleCache`, 512 MiB LRU under the app cache directory. Android may clear this directory under storage pressure. This is streaming cache, not a permanent offline-download library.
-- Signed playback URLs are resolved when needed and are not cached because they expire.
+## Fork and licensing
 
-## Build verification
-The source archive has not been compiled in this environment because Gradle/Android SDK are unavailable here. Run GitHub Actions or Android Studio before treating this release as build-verified. See `BUILD_STATUS.md`.
+LyricGlow is derived from Mochy Music. The upstream project is licensed under GPL-3.0; the original `LICENSE` file and upstream notices are retained. Changes in this derivative are also distributed under GPL-3.0. See [UPSTREAM.md](UPSTREAM.md) for attribution and change notes.
+
+Do not remove upstream copyright notices. If you distribute binaries, provide the corresponding source under the GPL terms.
+
+## Configuration
+
+Optional third-party integrations may require their own developer credentials. Keep credentials in `local.properties` or CI secrets; never commit private keys, OAuth secrets, or personal account tokens.

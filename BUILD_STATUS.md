@@ -1,7 +1,10 @@
-# Build status — 0.5.0
+# Build status for this LyricGlow snapshot
 
-Implemented source changes: YouTube Music public catalogue search, song and album result mapping, audio stream resolution, album queue creation, local metadata cache, saved-track library, Media3 streaming cache, Supabase email auth and saved-track backup, and the 002 cloud schema migration.
+- Source archive integrity: checked.
+- XML resource parsing: checked.
+- Branding/application ID consistency: statically inspected.
+- Android compilation: **not verified in this environment**. The Gradle wrapper attempted to download Gradle 9.3.1, but this environment could not resolve `services.gradle.org` (DNS/network unavailable).
+- Recommended CI task: `./gradlew assembleUniversalFossDebug`.
+- The upstream workflow currently builds `assembleUniversalGmsDebug`; that flavor may require the Google Cast/GMS configuration. The FOSS universal task is the default no-GMS build target.
 
-Not verified: `assembleDebug` was not run in this environment because no Gradle executable or Android SDK is installed. The first CI run is required to verify dependency resolution and Kotlin/Compose compilation.
-
-Known limitations: YouTube endpoints and stream extraction are unofficial and may change or rate-limit clients. Some videos/tracks will not resolve. No Google/YouTube account login or Premium entitlement is implemented. Cloud sync currently backs up saved tracks only; playlist/history/preferences sync, true offline downloads, synced lyrics, recommendations and advanced playback effects remain future work.
+Run the task in Android Studio or GitHub Actions with Android SDK 37 and JDK 21. Report the complete first build log before changing dependency versions.
