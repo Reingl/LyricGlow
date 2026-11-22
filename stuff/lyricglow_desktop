@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Lyricglow Music
+GenericName=YouTube Music player with synced lyrics
+Comment=YouTube Music in the terminal — ad-free, with word-by-word lyrics and animated covers
+Exec=kitty --class lyricglow --title "Lyricglow" -e lyricglow ytm
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;lyrics;youtube;ytmusic;
+Actions=Lyrics;Login;Doctor;
+
+[Desktop Action Lyrics]
+Name=Lyrics for whatever is playing
+Exec=kitty --class lyricglow --title "Lyricglow" -e lyricglow
+
+[Desktop Action Login]
+Name=Sign in to YouTube Music
+Exec=kitty --hold -e lyricglow ytm login
+
+[Desktop Action Doctor]
+Name=Run diagnostics
+Exec=kitty --hold -e lyricglow doctor

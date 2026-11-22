@@ -1,0 +1,59 @@
+# lyricglow addon — drop files like this in ~/.config/lyricglow/addons/   (or pass --addon FILE)
+# Everything is optional. Nothing here is bundled with lyricglow: point it at your own pictures, GIFs and videos.
+[addon]
+name   = "My pack"
+author = "me"
+
+# ── backgrounds: first matching rule wins. match = regex on title/artist/album, or id = part of the YouTube id, or "*" for everything
+[[background]]
+match  = { title = "really want to stay at your house" }
+file   = "~/Pictures/moon.jpg"       # image, GIF or video; relative paths are relative to this file; https:// URLs work too
+rotate = 270                          # degrees clockwise (this photo is sideways)
+dim    = 0.30
+cyber  = "on"                         # force cyberpsychosis on for this song  (on | off | inherit)
+lyric_style = "kinetic"
+
+[[background]]
+match = "*"
+file  = "builtin:earth"               # or any file; "builtin:earth" is the built-in scene
+
+# ── lyric rules: when a lyric line matches, that line switches style (and background) — then it goes back
+[[rule]]
+lyric = "got a shotgun in my pocket"  # built in already; shown as an example
+style = "slice"
+bg    = "immersive"
+
+# ── caption style: where the caption box goes and how it looks
+[caption]
+position  = "bottom"      # top | middle | bottom   (or x = "50%", y = "85%" / plain cell numbers)
+align     = "center"      # left | center | right
+max_width = "70%"
+uppercase = false
+reveal    = "line"        # line | word
+box       = true
+fg        = "#ffffff"
+bg        = "#000000"
+padding   = 1
+
+# ── custom buttons: tap them (Termux touch / mouse) or press their key. actions:
+#    next prev pause · seek:+10 · style:NAME · bg:MODE · cyber:MODE · toggle:beat · toggle:figures · effect:fire · toast:TEXT · open:URL · shell:CMD
+[[button]]
+label    = "Next"
+action   = "next"
+position = "top-right"    # top|middle|bottom - left|center|right   (or x = 10, y = 3)
+[[button]]
+label    = "Immersive"
+action   = "style:immersive"
+position = "top-right"
+key      = "I"            # optional keyboard shortcut
+[[button]]
+label    = "Fire!"
+action   = "effect:fire"
+position = "bottom-left"
+bg       = "#aa3311"
+
+# ── your own words for the immersive style (categories: fire water drink ice storm heart gold star music wind nature dance dream eye
+#    shake glitch rainbow smoke sleep laugh sad time speed danger magic space food bang grow)
+[[word_effect]]
+type  = "fire"
+words = ["wildfire", "cinders"]

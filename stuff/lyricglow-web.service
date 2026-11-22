@@ -1,0 +1,16 @@
+[Unit]
+Description=lyricglow web (YouTube Music web app, reached over Tailscale)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lyricglow web
+Restart=on-failure
+RestartSec=3
+# yt-dlp / ffmpeg / mpv live in the normal PATH; keep ~/.local/bin for pipx installs
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

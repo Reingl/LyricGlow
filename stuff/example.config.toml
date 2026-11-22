@@ -1,0 +1,152 @@
+# ════════════════════════════════════════════════════════════════════════════════════════════
+#  lyricglow — example.config.toml
+#
+#  Copy to  ~/.config/lyricglow/config.toml   (install.sh does this for you).
+#  EVERY setting is optional: what is written here is the default unless the line starts with
+#  "# " — those are off / unset by default. Command-line flags override this file.
+#  `lyricglow doctor` tells you what is working and what isn't.
+# ════════════════════════════════════════════════════════════════════════════════════════════
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [sources]  what lyricglow follows when you run plain `lyricglow` (not `lyricglow ytm`)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[sources]
+backend    = "auto"        # auto | playerctl | mpv | android | cmd
+                           #   auto = Linux: MPRIS (Spotify, Firefox, …) then mpv · Termux: mpv then Android
+# player     = "spotify"   # MPRIS: only follow this player (names: `playerctl -l`)
+# mpv_socket = "/tmp/mpvsocket"   # mpv: your player's --input-ipc-server path (auto-detected otherwise)
+# cmd        = "my-status-script" # any command printing the current track as JSON or TSV (see README)
+api        = ["https://lyrics-api.boidu.dev", "https://api.betterlyrics.org"]   # tried in order
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [display]
+# lyric_style: classic | kinetic (huge phrase) | word (ONE word) | immersive (word effects) | slice (glossy) | caption | vintage — live key: T
+lyric_style = "classic"
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[display]
+render     = "auto"        # auto | kitty | cells.  auto = pixel renderer in kitty (not in tmux), else cells
+shader     = "high"        # effects: off | low | high   (kitty high = animated blurred-cover backdrop)
+# font     = "Inter"       # kitty: lyric font family, or a path to a .ttf (its bold weight is used)
+before     = "desat"       # not-yet-sung words:   desat (soft white)  |  sat (album colour)
+after      = "sat"         # already-sung words:   sat | desat
+art        = true          # show the cover panel next to the lyrics
+align      = "left"        # cell renderer only: left | center
+max_width  = 72            # cell renderer only: lyric column width in characters
+offset     = 0.0           # global lyric sync nudge in seconds; + = lyrics earlier.  live: [ ] and 0
+debug      = false         # show frame time / bytes per frame (and Discord status).  live: d
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [glow]     live keys:  g/G strength · y style · c colour
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[glow]
+# strength = 1.0           # 0 … 2.   default: kitty 1.0, cells 0.8
+style      = "soft"        # soft | neon | bloom | halo | pulse | aurora | none
+color      = "album"       # album | white | accent | warm | cool | "#ff66aa"
+size       = 1.0           # radius multiplier, 0.4 … 3
+# follow   = "head"        # trail = every sung word glows (default per style) · head = only the syllable being sung
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [performance]
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[performance]
+# fps      = 60            # motion frame rate (scrolling, cover float). 30 / 60 / 120 / up to 240.
+                           #   default: kitty 60 · cells 30 · Termux 20
+sweep_hz   = 40            # kitty: max re-renders per second of the word-by-word sweep (the costly part)
+bg_hz      = 24            # kitty: backdrop updates per second
+low_end    = "auto"        # auto | on | off.   auto = ≤ 2 CPUs, or switches itself on if frames stay too slow.
+                           #   low-end: no blur, no glow blur, flat backdrop, no animated cover, 15 fps.  live: L
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [canvas]   ANIMATED ALBUM COVER — kitty only, ON by default (needs ffmpeg for mp4/HLS loops)
+#             Sources are tried in this order; remove one to stop using it. sources = [] turns it off.
+#               local      your own loops in `dir`:   "Artist - Title.mp4", "Album.webp", "<spotify id>.mp4"
+#               endpoints  URL templates below (e.g. your own Spotify-Canvas API)
+#               apple      Apple Music motion artwork through a community server — your ARTIST and ALBUM
+#                          names are sent to that server (see apple_api). Remove "apple" to keep lookups local.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[canvas]
+sources    = ["local", "endpoints", "apple"]
+# dir      = "~/.config/lyricglow/canvas"
+endpoints  = []            # e.g. ["http://localhost:3000/your/route?trackId={spotify_id}"]
+                           #   placeholders: {artist} {title} {album} {spotify_id} {duration}
+headers    = {}            # sent with endpoint requests, e.g. { Authorization = "Bearer …" }
+apple_api  = ["https://artwork.m8tec.top", "https://amaa.tromme.app"]
+fps        = 12            # loop frame rate
+seconds    = 6             # loop length cap
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [ytm]      the YouTube Music player:  `lyricglow ytm`
+#             Sign in: press  l  in the app, or run  `lyricglow ytm login`  (reuses your browser's login)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[ytm]
+# auth_file = "~/.config/lyricglow/ytm-auth.json"   # where the sign-in is stored (chmod 600)
+authuser   = 0             # which Google account in your browser: 0 = first, 1 = second, …
+# user     = "1234567890"  # brand-account id (rare)
+language   = "en"          # YouTube Music UI language — keeps shelf names like "Quick picks" recognisable
+radio      = true          # keep the queue topped up with related songs when it runs low
+volume     = 70
+mpv_args   = []            # extra arguments for mpv, e.g. ["--ao=opensles"] on Termux
+# cookies_from_browser = "firefox"   # let yt-dlp play as your logged-in account (Premium quality, age-gated songs)
+# oauth_client_id     = ""   # advanced / optional: ytmusicapi OAuth instead of the browser login
+# oauth_client_secret = ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  [discord]  Rich Presence — LINUX ONLY (Discord, Vesktop/arRPC, Flatpak and Snap are detected)
+#     1. https://discord.com/developers/applications → New Application. Its NAME is what friends see
+#        ("Listening to <name>"), e.g. "YouTube Music".
+#     2. Copy the Application ID into client_id, set enabled = true.
+#     Text templates can use:  {title} {artist} {album} {player} {url}
+#     Discord limits presence updates, so changes are sent at most every `min_interval` seconds.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[discord]
+enabled      = false
+client_id    = ""                      # your Application ID
+scope        = "ytm"                   # ytm = only songs played in `lyricglow ytm` · all = any player you follow
+type         = "listening"             # listening | playing | watching | competing
+details      = "{title}"               # first line
+state        = "{artist}"              # second line
+large_text   = "{album}"               # tooltip of the cover image
+art          = "url"                   # url = use the song's cover art · app = use large_image below · off
+large_image  = ""                      # asset key from your Discord application (fallback / art = "app")
+small_image  = ""                      # asset key for the small corner icon
+small_text   = ""
+timestamps   = "bar"                   # bar = progress bar · elapsed = "x:xx elapsed" · off
+paused       = "hide"                  # hide = clear the presence while paused · show = keep it, marked "(paused)"
+min_interval = 15                      # seconds between updates
+buttons      = [ { label = "Listen on YouTube Music", url = "{url}" } ]   # up to 2; {url} = the song's link
+
+
+# ───────────────────────────── lyric styles, backgrounds, beat, cyberpsychosis ─────────────────────────────
+[background]
+mode  = "auto"          # auto (images/GIFs/addons) | procedural | immersive (glossy floating objects + sparkles) | off   — live key: b
+# file = "~/Pictures/loop.gif"   # any image / GIF / video for EVERY song (or use an addon for per-song rules)
+fit   = "cover"         # cover | contain
+dim   = 0.42            # darken the picture so lyrics stay readable
+rotate = 0              # clockwise degrees (a sideways photo: 270)
+fps   = 10              # frames per second used when decoding a video
+beat  = true            # the picture pulses with the beat
+
+[beat]
+enabled  = true         # beat-reactive background (live key: B). Follows bass/kick/synth/hi-hats, NOT the voice,
+source   = "auto"       # unless a track has no beat sounds. auto | track (ffmpeg) | monitor (Linux parec) | lyrics
+strength = 1.0
+
+[cyber]
+mode      = "auto"      # off | auto (only "I Really Want to Stay at Your House") | on (every song) — live key: X
+intensity = 0.7
+shake     = 0.6
+scene     = "auto"      # the built-in Earth-over-the-moon scene: auto | off
+figures   = true        # the two seated silhouettes in that scene (live key: F)
+echo      = true        # lyrics DUPLICATE (red/cyan echo)
+stutter   = true        # … and STUTTER on the beat
+hud       = true        # the blinking warning bar
+
+[addons]
+shell = false           # allow addon buttons to run shell commands (action = "shell:…"). Off unless you turn it on.

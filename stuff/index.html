@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LyricGlow</title>
+<meta name="theme-color" content="#181614">
+<meta name="description" content="A YouTube Music client with word-by-word synced lyrics. No account needed.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="app">
+  <nav class="side" id="nav" aria-label="Main"></nav>
+  <main class="main" id="main" tabindex="-1"><div class="view" id="view" aria-live="polite"></div></main>
+</div>
+<footer class="mini" id="mini" aria-label="Player"></footer>
+<section class="np" id="np" hidden aria-label="Now playing"></section>
+<dialog class="dlg" id="dlg"></dialog>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<noscript><p class="ns">LyricGlow needs JavaScript.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

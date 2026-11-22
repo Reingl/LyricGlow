@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Hares/Rei's Ytmusic player (beta)</title>
+  <meta name="description" content="This is my yutube msuic player 100% real no fak 100% ad-fre too" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    html, body { overflow: auto; }
+    .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100dvh; padding-bottom: 96px; }
+    .nav { position: sticky; top: 0; height: calc(100dvh - 96px); padding: 18px 12px; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid var(--line); }
+    .nav a { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 14px; color: var(--text2); font-weight: 600; transition: .15s; }
+    .nav a:hover, .nav a.on { background: var(--surface2); color: var(--text); }
+    #view { padding: 24px 28px; max-width: 1440px; width: 100%; }
+    #view h1 { font-size: 30px; font-weight: 800; letter-spacing: -.6px; margin-bottom: 16px; }
+    #view h2 { font-size: 20px; font-weight: 800; margin: 18px 0 10px; }
+    .sec { margin-bottom: 28px; }
+    .sbox { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 46px; border-radius: 999px; background: var(--surface2); max-width: 520px; margin-bottom: 14px; }
+    .sbox input { flex: 1; background: none; border: 0; outline: none; font-size: 15px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 14px; }
+    .card { display: block; padding: 10px; border-radius: 16px; transition: background .15s; }
+    .card:hover { background: var(--surface); }
+    .card .art { aspect-ratio: 1; border-radius: 12px; background-size: cover; background-position: center; margin-bottom: 8px; }
+    .card.round .art { border-radius: 50%; }
+    .card .t { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card .s { color: var(--text2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list { display: flex; flex-direction: column; gap: 4px; }
+    .row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 10px; border-radius: 12px; cursor: pointer; }
+    .row:hover { background: var(--surface); }
+    .row.cur { background: rgba(var(--accent-rgb), .16); }
+    .row.cur .t { color: var(--accent); }
+    .row .art { width: 48px; height: 48px; border-radius: 10px; background-size: cover; background-position: center; position: relative; display: grid; place-items: center; }
+    .row .art .eq { display: none; color: #fff; background: rgba(0,0,0,.55); inset: 0; position: absolute; place-items: center; border-radius: inherit; }
+    .row.playing .art .eq { display: grid; }
+    .row .meta .t { font-weight: 600; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .meta .s { color: var(--text2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .end { display: flex; align-items: center; gap: 6px; color: var(--text3); font-size: 13px; }
+    .ibtn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text2); }
+    .ibtn:hover { background: var(--surface2); color: var(--text); }
+    .ibtn.like.on { color: var(--accent); }
+    .ibtn.like.on svg { fill: currentColor; }
+    .hero { display: flex; gap: 24px; align-items: flex-end; margin-bottom: 22px; flex-wrap: wrap; }
+    .hero .art { width: 200px; height: 200px; border-radius: 18px; background-size: cover; background-position: center; flex: none; box-shadow: 0 18px 44px rgba(0,0,0,.5); }
+    .hero .kick { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text2); }
+    .hero .sub { color: var(--text2); margin: 4px 0 14px; }
+    .acts { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn.pri { background: var(--accent); color: #fff; }
+    .btn.sm { padding: 7px 14px; font-size: 13px; }
+    .msg { padding: 18px; border-radius: 16px; background: var(--surface); color: var(--text2); line-height: 1.5; }
+    .skel { height: 44px; }
+    .menu { position: fixed; z-index: 150; min-width: 210px; padding: 6px; border-radius: 16px; background: rgba(24, 24, 32, .96); backdrop-filter: blur(24px); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.6); }
+    .menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; font-weight: 600; font-size: 13.5px; text-align: left; }
+    .menu button:hover { background: var(--surface2); }
+    dialog#dlg { margin: auto; border: 1px solid var(--line); border-radius: 22px; background: #14141b; color: var(--text); padding: 22px; width: min(460px, 92vw); box-shadow: 0 24px 60px rgba(0,0,0,.7); }
+    dialog#dlg::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(6px); }
+    dialog#dlg .in { width: 100%; padding: 11px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin: 8px 0 12px; outline: none; }
+    #player-bar { position: fixed; left: 12px; right: 12px; bottom: 12px; height: 78px; z-index: 60; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 520px) minmax(0, 1fr); align-items: center; gap: 14px; padding: 0 18px; border-radius: 22px; background: rgba(18, 18, 24, .88); backdrop-filter: blur(28px) saturate(1.6); border: 1px solid var(--line); box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+    .p-now { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .p-art { width: 52px; height: 52px; border-radius: 12px; background-size: cover; background-position: center; background-color: var(--surface2); flex: none; }
+    .p-meta { min-width: 0; }
+    .p-meta b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .p-meta small { display: block; color: var(--text2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .p-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .p-btns { display: flex; align-items: center; gap: 8px; }
+    .p-seek { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 11.5px; color: var(--text3); font-variant-numeric: tabular-nums; }
+    .p-seek input[type=range] { flex: 1; width: auto; height: 4px; accent-color: var(--accent); }
+    .p-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    .p-right input[type=range] { width: 90px; height: 4px; }
+
+    #lyrics-drawer { position: fixed; inset: 0 0 96px 0; z-index: 55; background: rgba(8, 8, 12, .94); backdrop-filter: blur(36px); padding: 28px clamp(18px, 6vw, 80px); overflow-y: auto; display: none; }
+    #lyrics-drawer.open { display: block; }
+    .ly-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .ly-line { font-size: clamp(24px, 3.6vw, 38px); font-weight: 800; line-height: 1.25; margin-bottom: .55em; color: rgba(255,255,255,.32); cursor: pointer; transition: color .25s, transform .25s; }
+    .ly-line:hover { color: rgba(255,255,255,.7); }
+    .ly-line.active { color: #fff; transform: scale(1.02); transform-origin: left center; }
+    .ly-line .syl { background: linear-gradient(90deg, #fff calc(var(--p, 0) * 100%), rgba(255,255,255,.35) 0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .ly-line:not(.active) .syl { background: none; color: inherit; }
+    .ly-none { color: var(--text2); font-size: 18px; padding: 18vh 0; text-align: center; }
+
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 1fr; }
+      .nav { position: fixed; bottom: 0; top: auto; left: 0; right: 0; height: 56px; flex-direction: row; justify-content: space-around; background: rgba(14,14,18,.95); border-top: 1px solid var(--line); border-right: 0; z-index: 65; padding: 4px; }
+      #player-bar { bottom: 62px; grid-template-columns: minmax(0, 1fr) auto; height: 64px; }
+      .p-seek, .p-right { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="nav" aria-label="Main navigation">
+      <div class="logo"><i>♪</i><span>LyricGlow</span></div>
+      <a href="#/home" data-tab="home">Home</a>
+      <a href="#/search" data-tab="search">Search</a>
+      <a href="#/library" data-tab="library">Library</a>
+      <a href="#/queue" data-tab="queue">Queue</a>
+    </aside>
+    <main id="view" tabindex="-1"></main>
+  </div>
+
+  <section id="lyrics-drawer" aria-label="Lyrics">
+    <div class="ly-head">
+      <strong id="ly-title">Lyrics</strong>
+      <button id="ly-close" class="btn sm" type="button">Close</button>
+    </div>
+    <div id="ly-body"></div>
+  </section>
+
+  <footer id="player-bar" aria-label="Audio player">
+    <div class="p-now">
+      <div id="p-art" class="p-art"></div>
+      <div class="p-meta">
+        <b id="p-title">Not playing</b>
+        <small id="p-artist">Pick a song to start</small>
+      </div>
+    </div>
+
+    <div class="p-mid">
+      <div class="p-btns">
+        <button id="btn-shuf" class="ctl" title="Shuffle" aria-label="Shuffle"></button>
+        <button id="btn-prev" class="ctl" title="Previous" aria-label="Previous"></button>
+        <button id="btn-play" class="ctl play" title="Play / Pause" aria-label="Play or pause"></button>
+        <button id="btn-next" class="ctl" title="Next" aria-label="Next"></button>
+        <button id="btn-rep" class="ctl" title="Repeat" aria-label="Repeat"></button>
+      </div>
+      <div class="p-seek">
+        <span id="t-cur">0:00</span>
+        <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek" />
+        <span id="t-dur">0:00</span>
+      </div>
+    </div>
+
+    <div class="p-right">
+      <button id="btn-lyr" class="ctl" title="Lyrics" aria-label="Toggle lyrics"></button>
+      <button id="btn-mute" class="ctl" title="Mute" aria-label="Mute"></button>
+      <input id="vol" type="range" min="0" max="1" step="0.02" value="0.8" aria-label="Volume" />
+    </div>
+  </footer>
+
+  <dialog id="dlg"></dialog>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module">
+    import { api, imgUrl, fmt } from "./js/api.js";
+    import { ic, toast } from "./js/dom.js";
+    import { prefs, applyPrefs, on } from "./js/store.js";
+    import * as P from "./js/player.js";
+    import { createLyrics } from "./js/lyrics.js";
+    import { app, loadLib, route } from "./js/views.js";
+
+    applyPrefs();
+
+    const btnShuf = document.getElementById("btn-shuf");
+    const btnPrev = document.getElementById("btn-prev");
+    const btnPlay = document.getElementById("btn-play");
+    const btnNext = document.getElementById("btn-next");
+    const btnRep  = document.getElementById("btn-rep");
+    const btnLyr  = document.getElementById("btn-lyr");
+    const btnMute = document.getElementById("btn-mute");
+
+    btnShuf.append(ic("shuffle"));
+    btnPrev.append(ic("prev"));
+    btnPlay.append(ic("play"));
+    btnNext.append(ic("next"));
+    btnRep.append(ic("repeat"));
+    btnLyr.append(ic("mic"));
+    btnMute.append(ic("vol"));
+
+    btnPlay.onclick = () => P.toggle();
+    btnPrev.onclick = () => P.prev();
+    btnNext.onclick = () => P.next();
+    btnShuf.onclick = () => P.toggleShuffle();
+    btnRep.onclick  = () => P.cycleRepeat();
+
+    const seek = document.getElementById("seek");
+    let seeking = false;
+    seek.addEventListener("pointerdown", () => (seeking = true));
+    seek.addEventListener("input", () => {
+      if (P.st.dur) document.getElementById("t-cur").textContent = fmt((seek.value / 1000) * P.st.dur);
+    });
+    seek.addEventListener("change", () => {
+      seeking = false;
+      if (P.st.dur) P.seek((seek.value / 1000) * P.st.dur);
+    });
+
+    const vol = document.getElementById("vol");
+    vol.value = prefs.volume;
+    vol.addEventListener("input", () => P.setVolume(parseFloat(vol.value)));
+    let lastVol = prefs.volume || 0.8;
+    btnMute.onclick = () => {
+      if (prefs.volume > 0) { lastVol = prefs.volume; P.setVolume(0); }
+      else { P.setVolume(lastVol); }
+    };
+
+    const drawer = document.getElementById("lyrics-drawer");
+    const lyr = createLyrics(document.getElementById("ly-body"), (sec) => P.seek(sec));
+    btnLyr.onclick = () => {
+      const open = drawer.classList.toggle("open");
+      btnLyr.classList.toggle("on", open);
+      if (open && P.cur()) lyr.load(P.cur());
+    };
+    document.getElementById("ly-close").onclick = () => {
+      drawer.classList.remove("open");
+      btnLyr.classList.remove("on");
+    };
+
+    on((ev, data) => {
+      if (ev === "track") {
+        const t = P.cur();
+        document.getElementById("p-title").textContent = t ? t.title : "Not playing";
+        document.getElementById("p-artist").textContent = t ? (t.artist || "YouTube Music") : "Pick a song to start";
+        document.getElementById("p-art").style.backgroundImage = t && t.art ? `url("${imgUrl(t.art)}")` : "none";
+        document.getElementById("ly-title").textContent = t ? `${t.title} — ${t.artist || ""}` : "Lyrics";
+        if (t && drawer.classList.contains("open")) lyr.load(t);
+      }
+      if (ev === "play") {
+        btnPlay.replaceChildren(ic(P.st.playing ? "pause" : "play"));
+      }
+      if (ev === "time") {
+        document.getElementById("t-cur").textContent = fmt(P.st.time);
+        document.getElementById("t-dur").textContent = fmt(P.st.dur);
+        if (!seeking && P.st.dur > 0) seek.value = Math.round((P.st.time / P.st.dur) * 1000);
+        if (drawer.classList.contains("open")) lyr.tick(P.st.time);
+      }
+      if (ev === "mode") {
+        btnShuf.classList.toggle("on", P.st.shuffle);
+        btnRep.classList.toggle("on", P.st.repeat !== "off");
+        btnRep.title = `Repeat: ${P.st.repeat}`;
+      }
+      if (ev === "volume") {
+        vol.value = prefs.volume;
+        btnMute.replaceChildren(ic(prefs.volume === 0 ? "mute" : "vol"));
+      }
+      if (ev === "error" && data) {
+        toast(`Skipped unavailable track: ${data.title}`);
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.code === "Space") { e.preventDefault(); P.toggle(); }
+    });
+
+    async function nav() {
+      const tab = await route();
+      document.querySelectorAll(".nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
+    }
+    window.addEventListener("hashchange", nav);
+
+    (async () => {
+      try { app.info = await api("/api/info"); } catch {}
+      await loadLib();
+      P.restore();
+      await nav();
+      if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+    })();
+  </script>
+</body>
+</html>
